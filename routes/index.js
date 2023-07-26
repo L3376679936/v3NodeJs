@@ -51,12 +51,83 @@ router.get("/menu", function (req, res, next) {
   });
 });
 
-router.get("/liuaobo", function (req, res, next) {
-  res.send({
-    meta: { msg: "添加成功", status: 200 },
-    data: "liuaobo",
+
+router.get("/productList", function (req, res, next) {
+  let sql = "SELECT JSON_ARRAYAGG(JSON_OBJECT('name', product_name, 'id', product_id)) AS products FROM goods_list;"
+  query(sql, [], next, (result) => {
+    // console.log(result[0].products, 'result');
+    // Q:为什么这里前端收到的数据带反斜杠呢？
+    // A:因为这里返回的是一个字符串，需要转换成对象
+    res.send({ meta:{msg: "获取成功", status: 200,}, data: JSON.parse(result[0].products) });
   });
-  // next()
 });
+
+
+
+router.get("/liuaobo", function (req, res, next) {
+  let sql = "SELECT JSON_ARRAYAGG(JSON_OBJECT('name', product_name, 'id', product_id)) AS products FROM goods_list;"
+  query(sql, [], next, (result) => {
+    console.log(result[0].products, 'result');
+    // Q:为什么这里前端收到的数据带反斜杠呢？
+    // A:因为这里返回的是一个字符串，需要转换成对象
+    res.send({ meta:{msg: "获取成功", status: 200,}, data: JSON.parse(result[0].products) });
+  });
+});
+
+router.post("/getGoodsList", function (req, res, next) {
+  console.log(req.body, 'req.query')
+  // let sql = "SELECT * FROM goods_list WHERE product_id = ?;";
+
+  
+// 使用一个数组来保存要查询的条件
+const conditions = [];
+const params = [];
+if(req.body!=={}){
+  for (let key in req.body) {
+    if(req.body[key]){
+      if (key === 'product_name') {
+        conditions.push(`${key} LIKE ?`);
+        params.push(`${req.body[key]}%`); // 在参数的开头添加 % 通配符
+      } else {
+        conditions.push(`${key} = ?`);
+        params.push(req.body[key]);
+      }
+    }
+
+  }
+}
+
+// 构建 SQL 查询语句
+let sql = `SELECT * FROM goods_list`;
+if (conditions.length > 0) {
+  sql += ` WHERE ${conditions.join(' AND ')}`;
+}
+
+
+// console.log(sql, 'sql')
+
+  // let sql = "SELECT JSON_ARRAYAGG(JSON_OBJECT('name', product_name, 'id', product_id)) AS products FROM goods_list;"
+  query(sql, params, next, (result) => {
+    console.log(result, 'result');
+    // Q:为什么这里前端收到的数据带反斜杠呢？
+    // A:因为这里返回的是一个字符串，需要转换成对象
+    res.send({ meta:{msg: "获取成功", status: 200,}, data:result});
+  });
+});
+
+router.post("/delGoods", function (req, res, next) {
+  console.log(req.body, 'req.query')
+  // let sql = "SELECT * FROM goods_list WHERE product_id = ?;";
+  // let sql = "INSERT INTO goods_list (product_id, product_name, product_price, product_num, product_weight, product_state, product_time) VALUES (?, ?, ?, ?, ?, ?, ?);";
+  let param = req.body.product_id;
+  let sql = "DELETE FROM goods_list WHERE product_id = ?;";
+  query(sql, [param], next, (result) => {
+    // console.log(result, 'result');
+    // Q:为什么这里前端收到的数据带反斜杠呢？
+    // A:因为这里返回的是一个字符串，需要转换成对象
+    res.send({ meta:{msg: "删除成功", status: 200,} });
+  });
+
+})
 
 module.exports = router;
