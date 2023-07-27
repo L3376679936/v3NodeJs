@@ -160,14 +160,7 @@ router.get("/liuaobo", function (req, res, next) {
 // });
 
 router.post("/getGoodsList", function (req, res, next) {
-  // 每页显示的数据量
-  const pageSize = req.body.pageSize || 10;
-  // 获取前端传递的页码参数，默认为第一页
-  const currentPage = req.body.currentPage || 1;
-  // 计算偏移量
-  const offset = (currentPage - 1) * pageSize;
-
-  // 使用一个数组来保存要查询的条件
+// 使用一个数组来保存要查询的条件
   const conditions = [];
   const params = [];
 
@@ -188,7 +181,7 @@ router.post("/getGoodsList", function (req, res, next) {
       }
     }
   }
-console.log(conditions,'conditions')
+// console.log(conditions,'conditions')
 // [
 //   'product_name LIKE ?',
 //   'date_created = ?',
@@ -210,11 +203,9 @@ console.log(conditions,'conditions')
   // 执行带价格区间筛选条件的 SQL 查询，获取总条数
   query(countSql, params, next, (countResult) => {
     const total = countResult[0].total; // 总条数
-
     // 构建带价格区间筛选条件和 LIMIT 子句的 SQL 查询，用于获取当前页的数据
     let dataSql = sql + ` LIMIT ?, ?`;
-    params.push(offset, pageSize);
-
+    params = [...params,pagination(req.body) ];
     // 执行带价格区间筛选条件和 LIMIT 子句的 SQL 查询，获取当前页的数据
     query(dataSql, params, next, (result) => {
       // console.log(result, "result");
@@ -223,6 +214,16 @@ console.log(conditions,'conditions')
   });
 });
 
+// 分页方法
+const pagination = (req) => {
+  // 每页显示的数据量
+  const pageSize = req.pageSize || 10;
+  // 获取前端传递的页码参数，默认为第一页
+  const currentPage = req.currentPage || 1;
+  // 计算偏移量
+  const offset = (currentPage - 1) * pageSize;
+  return [pageSize, offset];
+}
 
 
 
@@ -242,5 +243,12 @@ router.post("/delGoods", function (req, res, next) {
     res.send({ meta: { msg: "删除成功", status: 200 } });
   });
 });
+
+
+
+
+
+
+
 
 module.exports = router;
