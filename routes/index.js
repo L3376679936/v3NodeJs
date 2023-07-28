@@ -7,6 +7,7 @@ const { query, transaction } = require("../common/mysql");
 router.get("/", function (req, res, next) {
   res.render("index", { title: "Express" });
 });
+
 router.post("/login", function (req, res, next) {
   const { account, password } = req.body;
   // console.log(req.user,'reqqqqqqqqqqqqqqqq');
@@ -81,89 +82,12 @@ router.get("/liuaobo", function (req, res, next) {
   });
 });
 
-// router.post("/getGoodsList", function (req, res, next) {
-//   console.log(req.body, "req.query");
-//   // let sql = "SELECT * FROM goods_list WHERE product_id = ?;";
-//   // 每页显示的数据量
-//   const pageSize = req.body.pageSize;
-// const unit_priceStart = req.body.unit_priceStart;
-// const unit_priceEnd = req.body.unit_priceEnd;
-//   // 获取前端传递的页码参数，默认为第一页
-//   const currentPage = req.body.currentPage || 1;
-
-//   const paramArr = ["pageSize", "currentPage", "unit_priceStart", "unit_priceEnd"]
-//   // 计算偏移量
-//   const offset = (currentPage - 1) * pageSize;
-
-//   // 使用一个数组来保存要查询的条件
-//   const conditions = [];
-//   const params = [];
-//   if (req.body !== {}) {
-//     for (let key in req.body) {
-//       if (req.body[key] && !paramArr.includes(key)) {
-//         if (key === "product_name") {
-//           conditions.push(`${key} LIKE ?`);
-//           params.push(`${req.body[key]}%`); // 在参数的开头添加 % 通配符
-//         } else {
-//           conditions.push(`${key} = ?`);
-//           params.push(req.body[key]);
-//         }
-//       }
-//     }
-//   }
-
-//   // 构建 SQL 查询语句
-//   let sql = `SELECT * FROM goods_list `;
-
-//   if (conditions.length > 0) {
-//     sql += ` WHERE ${conditions.join(" AND ")}`;
-//   }
-
-//   // console.log(sql, 'sql')
-
-//   // let sql = "SELECT JSON_ARRAYAGG(JSON_OBJECT('name', product_name, 'id', product_id)) AS products FROM goods_list;"
-//   query(sql, params, next, (result) => {
-//     console.log(result, "result");
-//     let sql1 = `SELECT * FROM goods_list LIMIT ?, ?`;
-//     if (conditions.length > 0) {
-//       sql1 += ` WHERE ${conditions.join(" AND ")}`;
-//     }
-//     let total = result.length;
-
-//     if (unit_priceStart && unit_priceEnd) {
-//       total = result.filter(item => item.unit_price > unit_priceStart && item.unit_price < unit_priceEnd).length;
-//     } else if (unit_priceStart) {
-//       total = result.filter(item => item.unit_price > unit_priceStart).length;
-//     } else if (unit_priceEnd) {
-//       total = result.filter(item => item.unit_price < unit_priceEnd).length;
-//     }
-
-//     params.unshift(offset, pageSize);
-//     query(sql1, params, next, (result) => {
-//     let data = result;
-
-//       if (unit_priceStart && unit_priceEnd) {
-//         data = result.filter(item => item.unit_price > unit_priceStart && item.unit_price < unit_priceEnd);
-//       } else if (unit_priceStart) {
-//         data = result.filter(item => item.unit_price > unit_priceStart);
-//       } else if (unit_priceEnd) {
-//         data = result.filter(item => item.unit_price < unit_priceEnd);
-//       }
-
-//       // console.log(result, 'result');
-//       res.send({ meta: { msg: "获取成功", status: 200 }, data, total });
-//     });
-
-//     // Q:为什么这里前端收到的数据带反斜杠呢？
-//     // A:因为这里返回的是一个字符串，需要转换成对象
-//   });
-// });
-
 router.post("/getGoodsList", function (req, res, next) {
 // 使用一个数组来保存要查询的条件
   const conditions = [];
   const params = [];
 
+  // 使用一个数组来保存要查询的条件
   for (let key in req.body) {
     if (req.body[key] && key !== "pageSize" && key !== "currentPage") {
       if (key === "product_name") {
@@ -205,30 +129,64 @@ router.post("/getGoodsList", function (req, res, next) {
     const total = countResult[0].total; // 总条数
     // 构建带价格区间筛选条件和 LIMIT 子句的 SQL 查询，用于获取当前页的数据
     let dataSql = sql + ` LIMIT ?, ?`;
-    params = [...params,pagination(req.body) ];
     // 执行带价格区间筛选条件和 LIMIT 子句的 SQL 查询，获取当前页的数据
-    query(dataSql, params, next, (result) => {
+    query(dataSql, [...params,...pagination(req.body)], next, (result) => {
       // console.log(result, "result");
       res.send({ meta: { msg: "获取成功", status: 200 }, data: result, total });
     });
   });
 });
 
-// 分页方法
-const pagination = (req) => {
-  // 每页显示的数据量
-  const pageSize = req.pageSize || 10;
-  // 获取前端传递的页码参数，默认为第一页
-  const currentPage = req.currentPage || 1;
-  // 计算偏移量
-  const offset = (currentPage - 1) * pageSize;
-  return [pageSize, offset];
-}
+router.post('/isEdit', function (req, res, next) {
+let sql = "UPDATE `goods_list` SET "
+let sqlContent = []
+let params = []
+  for (let key in req.body) {
+    if(key!== 'product_id' ){
+      sqlContent.push(`${key} = ?`)
+      params.push(req.body[key])
+    }
+  }
+  if(sqlContent.length>0){
+    sql += sqlContent.join(',')
+  }
+  sql += ' WHERE product_id = ?'
+  console.log(req.body,'req.body')
+  console.log(sql,'sql')
+  // console.log(Object.values(req.body),'Object.values(req.body)')
+  
+  query(sql, [...params,req.body.product_id], next, (result) => {
 
+    res.send({ meta: { msg: "编辑成功", status: 200 } });
+  })
 
+})
 
-
-
+router.post('/addGoods', function (req, res, next) {
+  let sql = "INSERT INTO `goods_list`"
+  let sqlContent = []
+  let params = []
+  req.body.product_id = new Date().getTime() + Math.floor(Math.random() * 10) + ''
+    for (let key in req.body) {
+      if(req.body){
+        sqlContent.push(`${key}`)
+        params.push(req.body[key])
+      }
+    }
+    if(sqlContent.length>0){
+      sql += '('+sqlContent.join(',')+')' + ' VALUES (' + (sqlContent.map(item => '?').join(',')) + ')'
+    }
+    // sql += ' WHERE product_id = ?'
+    // console.log(req.body,'req.body')
+    console.log(sql,'sql')
+    console.log(params,'params')
+    // console.log(Object.values(req.body),'Object.values(req.body)')
+    query(sql, params, next, (result) => {
+      console.log(result,'result')
+      res.send({ meta: { msg: "新增成功", status: 200 } });
+    })
+  
+})
 
 router.post("/delGoods", function (req, res, next) {
   console.log(req.body, "req.query");
@@ -245,6 +203,17 @@ router.post("/delGoods", function (req, res, next) {
 });
 
 
+// 分页方法
+const pagination = (req) => {
+  // 每页显示的数据量
+  const pageSize = req.pageSize || 10;
+  // 获取前端传递的页码参数，默认为第一页
+  const currentPage = req.currentPage || 1;
+  // 计算偏移量
+  const offset = (currentPage - 1) * pageSize;
+
+  return [ offset,pageSize];
+}
 
 
 
